@@ -1,0 +1,7 @@
+export * from "./schema"
+export * from "./types"
+export * from "./saveLegalInfo"
+export * from "./getLegalInfo"
+export * from "./getLegalInfoById"
+export * from "./updateLegalInfo"
+export * from "./deleteLegalInfo"
