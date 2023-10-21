@@ -37,6 +37,9 @@ export default class User extends Controller {
       this.updatePassword
     );
     this.router.post("/send_phone_otp", this.sendOtpToPhoneNo);
+    this.router.post("/send_otp", this.sendOtp);
+    this.router.post("/send_email_otp", this.sendEmailOtp);
+    this.router.post("/verify_otp", this.verifyOtp);
     this.router.post("/forget_password", this.forgetPassword);
     this.router.post("/change_password", this.changePassword);
     this.router.post("/reset_password", this.resetPassword);
@@ -87,5 +90,6 @@ export default class User extends Controller {
     );
     this.router.patch("/:id", validateAuthIdToken, this.updateUser);
     this.router.get("/isPrivate/:id", this.checkIsPrivate);
+    this.router.post("/sendWebPush", this.sendWebPush);
   }
 }

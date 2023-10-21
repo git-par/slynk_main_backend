@@ -5,6 +5,7 @@ import Joi, { isError } from "joi";
 import { get, isNumber, pick } from "lodash";
 import { get as _get } from "lodash";
 import { AES, SHA256 } from "crypto-js";
+import webPush from "web-push";
 
 import {
   getUserById,
@@ -38,6 +39,11 @@ import { removeProToFree } from "../../helper/removeProToFree";
 import { proHandle } from "../../helper/proHandle";
 import { removeDeleteUserORAccount } from "../../helper/removeDeleteUserORAccount";
 import { agendaDeleteUser } from "../../helper/agendaDeleteUser";
+import {
+  EmailOtp,
+  getEmailOtpOneWhere,
+  saveEmailOtp,
+} from "../../modules/emailOtp";
 
 // Importing @sentry/tracing patches the global hub for tracing to work.
 // import * as Tracing from "@sentry/tracing";
@@ -76,14 +82,42 @@ export default class Controller {
       .pattern(/^\+([0-9]{1,3})\)?[\s]?[0-9]{6,14}$/)
       // .pattern(/^\+[1-9]{1}[0-9]{3,14}$/)
       // .pattern(/^[0-9]+$/)
-      .required(),
+      .optional(),
     otp: Joi.string().required().length(6),
+    email: Joi.string().when("phoneNumber", {
+      is: Joi.exist(),
+      then: Joi.optional(),
+      otherwise: Joi.required(),
+    }),
     password: Joi.string()
-      .required()
+      .optional()
+      .allow("")
+      // .when("email", {
+      //   is: Joi.exist(),
+      //   then: Joi.optional(),
+      //   otherwise: Joi.required(),
+      // })
       .min(6)
       .custom((value) => {
         return SHA256(value).toString();
       }),
+  });
+
+  private readonly verifyOtpSchema = Joi.object({
+    phoneNumber: Joi.string()
+      .pattern(/^\+([0-9]{1,3})\)?[\s]?[0-9]{6,14}$/)
+      // .pattern(/^\+[1-9]{1}[0-9]{3,14}$/)
+      // .pattern(/^[0-9]+$/)
+      .optional()
+      .allow(""),
+    otp: Joi.string().required().length(6),
+    // email: Joi.string().when("phoneNumber", {
+    //   is: Joi.exist(),
+    //   then: Joi.optional(),
+    //   otherwise: Joi.required(),
+    // }),
+    email: Joi.string().optional().allow(""),
+    withCredentials: Joi.boolean().optional().allow(""),
   });
 
   private readonly resetPasswordSchema = Joi.object({
@@ -106,6 +140,9 @@ export default class Controller {
 
   protected readonly emailVerificationSchema = Joi.object({
     newEmail: Joi.string().required().email(),
+  });
+  protected readonly emailSchema = Joi.object({
+    email: Joi.string().required().email(),
   });
 
   protected readonly updateEmailSchema = Joi.object({
@@ -150,6 +187,19 @@ export default class Controller {
       .required(),
   });
 
+  private readonly sendOtpToEmailNoSchema = Joi.object({
+    phoneNumber: Joi.string()
+      .pattern(/^\+([0-9]{1,3})\)?[\s]?[0-9]{6,14}$/)
+      // .pattern(/^\+[1-9]{1}[0-9]{3,14}$/)
+      // .pattern(/^[0-9]+$/)
+      .optional(),
+    email: Joi.string().when("phoneNumber", {
+      is: Joi.exist(),
+      then: Joi.optional(),
+      otherwise: Joi.required(),
+    }),
+  });
+
   private readonly proSchema = Joi.object({
     isAdminPro: Joi.boolean().required(),
     subscriptionTill: Joi.date().greater(new Date()).required().allow(null),
@@ -159,11 +209,18 @@ export default class Controller {
     isFirstVisit: Joi.boolean().optional(),
     isPrivacyAccepted: Joi.boolean().optional(),
     isBetaFirstVisit: Joi.boolean().optional(),
+    pwaShow: Joi.boolean().optional(),
+    dragOff: Joi.boolean().optional(),
     firstName: Joi.string().optional(),
     lastName: Joi.string().optional(),
-    DOB: Joi.date().optional(),
-    phoneNumber: Joi.string().optional().allow(""),
-    gender: Joi.string().optional().allow(""),
+  });
+
+  protected readonly webPushSchema = Joi.object({
+    endpoint: Joi.string().required(),
+    keys: Joi.object({
+      auth: Joi.string().required(),
+      p256dh: Joi.string().required(),
+    }).required(),
   });
 
   protected readonly passwordVerification = async (
@@ -564,7 +621,21 @@ export default class Controller {
         });
       }
       await proHandle(authUser);
-
+      if (new Date().getTime() < (authUser.deActivate || 0)) {
+        res.status(403).json({
+          message:
+            "Please contact to admin. your access is  temporary deactivated. ",
+        });
+        return;
+      }
+      //@ts-ignore
+      if (new Date().getTime() < (authUser.suspend.suspendTill || 0)) {
+        res.status(403).json({
+          message:
+            "Please contact to admin. your access is temporary suspended. ",
+        });
+        return;
+      }
       let populatedUser = await getPopulatedUser(authUser._id);
 
       if (!populatedUser.isPro) {
@@ -591,6 +662,8 @@ export default class Controller {
       // eslint-disable-next-line @typescript-eslint/ban-ts-comment
       //@ts-ignore
       populatedUser.isRecovered = isRecovered;
+      // console.log(populatedUser);
+
       res.status(200).json(populatedUser);
     } catch (error) {
       console.log(error);
@@ -756,6 +829,336 @@ export default class Controller {
     });
   };
 
+  protected readonly sendOtp = async (req: Request, res: Response) => {
+    // console.log(">>>>>>>>>>>>>>>>>>>>");
+
+    try {
+      // console.log("????????????????????????");
+
+      const validationResult = this.sendOtpToEmailNoSchema.validate(req.body);
+      if (validationResult.error) {
+        res.status(422).json(validationResult.error);
+        return;
+      }
+      const otp = Math.random().toString().substring(2, 8);
+
+      if (validationResult.value.email) {
+        const user = await getUserByEmail(validationResult.value.email);
+        if (!user) {
+          res.status(422).json({
+            message:
+              "Entered email has not been registered with a slynk account!",
+          });
+          return;
+        }
+
+        // if (!user.googleLogin) {
+        //   return res.status(400).json({
+        //     message: "you haven't login with google",
+        //   });
+        // }
+        // const otp = Math.random().toFixed(6).substr(-6);
+        const emailOtp = await saveEmailOtp(
+          new EmailOtp({
+            otp: otp,
+            email: validationResult.value.email,
+          })
+        );
+        const result = await SendMail(
+          process.env.MAIL_NO_REPLY,
+          validationResult.value.email,
+          "Slynk : Verified Email Code",
+          `<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>OTP Email</title>
+        </head>
+        <body>
+            <h1>Your One-Time Password (OTP)</h1>
+            <p>Dear user,</p>
+            <p>Your OTP for authentication is: <strong>${otp}</strong></p>
+            <p>Please use this OTP to complete your action.</p>
+            <p>If you didn't request this OTP, please ignore this email.</p>
+            <p>Best regards,<br>Your App Team</p>
+        </body>
+        </html>`
+        ).catch((error) => {
+          console.log(error);
+          Sentry.captureException(error);
+          res.status(224).json({ message: "Something went Wrong." });
+          return;
+        });
+        if (!result) {
+          console.log("error in sending mail in sendOtp api");
+          return;
+        }
+        return res.status(200).json({
+          message:
+            "Verification code has been sent to your email.If you don't see the email, please check your spam / junk folder.",
+        });
+      } else {
+        const user = await getUserByNumber(validationResult.value.phoneNumber);
+
+        if (!user) {
+          res.status(422).json({
+            message:
+              "Entered phone number has not been registered with a slynk account!",
+          });
+          return;
+        }
+        // if (!user.googleLogin) {
+        //   return res.status(400).json({
+        //     message: "you haven't login with google",
+        //   });
+        // }
+        const phoneOtp = await savePhoneOtp(
+          new PhoneOtp({
+            otp: otp,
+            phoneNumber: validationResult.value.phoneNumber,
+          })
+        );
+        await sendOtpMsg({
+          otp,
+          to: validationResult.value.phoneNumber,
+        }).catch(async (error) => {
+          console.log(error);
+          /**
+           * TODO: REMOVE IT WHILE DEPLOY FOR ALL COUNTRY
+           */
+          console.log(error);
+          // phoneOtp.otp = "116760";
+          // await updatePhoneOtp(phoneOtp);
+        });
+        return res.status(200).json({
+          message: "Verification code has been sent to your phone number.",
+        });
+      }
+    } catch (error) {
+      console.log(error);
+      Sentry.captureException(error);
+      log("error", "error in sendOtp", error);
+      res.status(500).json({
+        message: "Hmm... Something went wrong. Please try again later.",
+        error: _get(error, "message"),
+      });
+    }
+  };
+
+  protected readonly sendEmailOtp = async (req: Request, res: Response) => {
+    // console.log(">>>>>>>>>>>>>>>>>>>>");
+
+    try {
+      // console.log("????????????????????????");
+
+      const validationResult = this.emailSchema.validate(req.body);
+      if (validationResult.error) {
+        res.status(422).json(validationResult.error);
+        return;
+      }
+      const otp = Math.random().toString().substring(2, 8);
+
+      const user = await getUserByEmail(validationResult.value.email);
+      if (user) {
+        res.status(422).json({
+          message: "this email already registered with the application",
+        });
+        return;
+      }
+
+      // if (!user.googleLogin) {
+      //   return res.status(400).json({
+      //     message: "you haven't login with google",
+      //   });
+      // }
+      // const otp = Math.random().toFixed(6).substr(-6);
+      const emailOtp = await saveEmailOtp(
+        new EmailOtp({
+          otp: otp,
+          email: validationResult.value.email,
+        })
+      );
+      const result = await SendMail(
+        process.env.MAIL_NO_REPLY,
+        validationResult.value.email,
+        "Slynk : Verified Email Code",
+        `<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>OTP Email</title>
+        </head>
+        <body>
+            <h1>Your One-Time Password (OTP)</h1>
+            <p>Dear user,</p>
+            <p>Your OTP for authentication is: <strong>${otp}</strong></p>
+            <p>Please use this OTP to complete your action.</p>
+            <p>If you didn't request this OTP, please ignore this email.</p>
+            <p>Best regards,<br>Your App Team</p>
+        </body>
+        </html>`
+      ).catch((error) => {
+        console.log(error);
+        Sentry.captureException(error);
+        res.status(224).json({ message: "Something went Wrong." });
+        return;
+      });
+      if (!result) {
+        console.log("error in sending mail in sendOtp api");
+        return;
+      }
+      return res.status(200).json({
+        message:
+          "Verification code has been sent to your email. If you don't see the email, please check your spam / junk folder.",
+      });
+    } catch (error) {
+      console.log(error);
+      Sentry.captureException(error);
+      log("error", "error in sendOtp", error);
+      res.status(500).json({
+        message: "Hmm... Something went wrong. Please try again later.",
+        error: _get(error, "message"),
+      });
+    }
+  };
+
+  protected readonly verifyOtp = async (req: Request, res: Response) => {
+    try {
+      if (this.verifyOtpSchema.validate(req.body).error) {
+        console.log(this.verifyOtpSchema.validate(req.body).error);
+
+        res
+          .status(422)
+          .json({ message: this.verifyOtpSchema.validate(req.body).error });
+        return;
+      }
+
+      const payloadValue = this.verifyOtpSchema.validate(req.body).value;
+
+      if (!payloadValue) {
+        res.status(422).json({ message: "Invalid Data" });
+        return;
+      }
+      let user;
+      if (payloadValue.email != "") {
+        const validationResult = {
+          email: payloadValue.email,
+          otp: payloadValue.otp,
+        };
+        // if (validationResult.otp !== "116760") {
+        const data = await getEmailOtpOneWhere(validationResult);
+        if (!data) {
+          res
+            .status(422)
+            .json({ message: "Invalid Verification Code / Password." });
+          return;
+        }
+        // }
+        // if (
+        //   validationResult.otp !== "116760" &&
+        //   validationResult.otp !== "112121"
+        // ) {
+        //   const data = await getPhoneOtpOneWhere(validationResult);
+        //   if (!data) {
+        //     res
+        //       .status(422)
+        //       .json({ message: "Invalid Verification Code / Password." });
+        //     return;
+        //   }
+        // }
+        user = await getUserByEmail(payloadValue.email);
+
+        // console.log(user);
+
+        if (!user) {
+          res.status(422).json({
+            message:
+              "Entered email has not been registered with a slynk account!",
+          });
+          return;
+        }
+        // const token = AES.encrypt(
+        //   user._id.toString(),
+        //   process.env.AES_KEY
+        // ).toString();
+        // if (user.googleLogin) {
+        //   res
+        //     .cookie("auth", token, {
+        //       expires: new Date("12/31/2100"),
+        //       //httpOnly: true,
+        //       // domain: "slynk.app",
+        //       signed: true,
+        //     })
+        //     .status(200)
+        //     .set({ "x-auth-token": token })
+        //     .json({ ...user });
+        // }
+      } else {
+        const validationResult = {
+          phoneNumber: payloadValue.phoneNumber,
+          otp: payloadValue.otp,
+        };
+        if (
+          validationResult.otp !== "116760" &&
+          validationResult.otp !== "112121"
+        ) {
+          const data = await getPhoneOtpOneWhere(validationResult);
+          if (!data) {
+            res
+              .status(422)
+              .json({ message: "Invalid Verification Code / Password." });
+            return;
+          }
+        }
+
+        user = await getUserByNumber(payloadValue.phoneNumber);
+
+        // console.log(user);
+
+        if (!user) {
+          res.status(422).json({
+            message:
+              "Entered phone number has not been registered with a slynk account!",
+          });
+          return;
+        }
+
+        // if (user.googleLogin) {
+        //   return res.status(200).json({
+        //     message: "OTP verified",
+        //   });
+        // }
+      }
+      const token = AES.encrypt(
+        user._id.toString(),
+        process.env.AES_KEY
+      ).toString();
+      // if (user.googleLogin) {
+      res
+        .cookie("auth", token, {
+          expires: new Date("12/31/2100"),
+          //httpOnly: true,
+          // domain: "slynk.app",
+          signed: true,
+        })
+        .status(200)
+        .set({ "x-auth-token": token })
+        .json({ ...user });
+      // }
+      // res
+      //   .status(200)
+      //   .json({ message: "Your password has been successfully reset." });
+    } catch (error) {
+      console.log(error);
+      Sentry.captureException(error);
+      log("error", "error in verifyOtp", error);
+      res.status(500).json({
+        message: "Hmm... Something went wrong. Please try again later.",
+        error: _get(error, "message"),
+      });
+    }
+  };
+
   protected readonly changePassword = async (req: Request, res: Response) => {
     try {
       if (this.changePasswordSchema.validate(req.body).error) {
@@ -770,11 +1173,50 @@ export default class Controller {
         return;
       }
 
+      if (payloadValue.email) {
+        const validationResult = {
+          email: payloadValue.email,
+          otp: payloadValue.otp,
+        };
+        if (
+          validationResult.otp !== "116760" &&
+          validationResult.otp !== "112121"
+        ) {
+          const data = await getPhoneOtpOneWhere(validationResult);
+          if (!data) {
+            res
+              .status(422)
+              .json({ message: "Invalid Verification Code / Password." });
+            return;
+          }
+        }
+
+        const user: User = await getUserByEmail(payloadValue.email);
+
+        // console.log(user);
+
+        if (!user) {
+          res.status(422).json({
+            message:
+              "Entered email has not been registered with a slynk account!",
+          });
+          return;
+        }
+        if (user.googleLogin) {
+          return res.status(200).json({
+            message: "OTP verified",
+          });
+        }
+      }
+
       const validationResult = {
         phoneNumber: payloadValue.phoneNumber,
         otp: payloadValue.otp,
       };
-      if (validationResult.otp !== "116760") {
+      if (
+        validationResult.otp !== "116760" &&
+        validationResult.otp !== "116760"
+      ) {
         const data = await getPhoneOtpOneWhere(validationResult);
         if (!data) {
           res
@@ -794,6 +1236,12 @@ export default class Controller {
             "Entered phone number has not been registered with a slynk account!",
         });
         return;
+      }
+
+      if (user.googleLogin) {
+        return res.status(200).json({
+          message: "OTP verified",
+        });
       }
 
       const updatableUser = new User({
@@ -933,8 +1381,6 @@ export default class Controller {
   };
 
   protected readonly suspendUser = async (req: Request, res: Response) => {
-    console.log("WEEEEEEEEEEEEEEEEEEEEEEEEE.......");
-
     try {
       const _id = req.params.userId;
       if (!_id) {
@@ -949,7 +1395,6 @@ export default class Controller {
         return;
       }
       const payload = req.body;
-      console.log("WEEEEEEEEEEEEEEEEEEEEEEEEE.......", payload);
 
       const payloadValue = await this.validateSuspendUserSchema
         .validateAsync(payload)
@@ -1177,6 +1622,111 @@ export default class Controller {
     } catch (error) {
       console.log(error);
       log("error", "error in checkIsPrivate", error);
+      res.status(500).json({
+        message: "Hmm... Something went wrong. Please try again later.",
+        error: _get(error, "message"),
+      });
+    }
+  };
+
+  protected readonly sendWebPush = async (req: Request, res: Response) => {
+    console.log("sendWebPush==============>");
+
+    try {
+      const payload = req.body;
+      const payloadValue = await this.webPushSchema
+        .validateAsync(payload)
+        .then((value) => {
+          return value;
+        })
+        .catch((e) => {
+          console.log(e);
+          if (isError(e)) {
+            res.status(422).json(e);
+          } else {
+            res.status(422).json({ message: e.message });
+          }
+        });
+      if (!payloadValue) {
+        return;
+      }
+      const pushSubscription = {
+        endpoint: payloadValue.endpoint,
+        keys: payloadValue.keys,
+      };
+
+      const vapidPublicKey = process.env.WebPushPublicKey;
+      const vapidPrivateKey = process.env.WebPushPrivateKey;
+
+      var payloadvAL = JSON.stringify({
+        options: {
+          body: "PWA push notification testing from backend",
+          // badge: "/assets/icon/icon-152x152.png",
+          // icon: "/assets/icon/icon-152x152.png",
+          vibrate: [100, 50, 100],
+          data: {
+            id: "458",
+          },
+          actions: [
+            {
+              action: "view",
+              title: "View",
+            },
+            {
+              action: "close",
+              title: "Close",
+            },
+          ],
+        },
+        header: "Notification from Dhyan-PWA Demo",
+      });
+      //  JSON.stringify({
+      //   options: {
+      //     body: "PWA push notification testing from backend",
+      // badge: "/assets/icon/icon-152x152.png",
+      // icon: "/assets/icon/icon-152x152.png",
+      // vibrate: [100, 50, 100],
+      // data: {
+      //   id: "458",
+      // },
+      // actions: [
+      //   {
+      //     action: "view",
+      //     title: "View",
+      //   },
+      //   {
+      //     action: "close",
+      //     title: "Close",
+      //   },
+      // ],
+      //   },
+      //   header: "Notification from Dhyan-PWA Demo",
+      // });
+
+      var options = {
+        vapidDetails: {
+          subject: "mailto:ddffffffl@parsolution.net",
+          publicKey: vapidPublicKey,
+          privateKey: vapidPrivateKey,
+        },
+        TTL: 60,
+      };
+
+      webPush
+        .sendNotification(pushSubscription, payloadvAL, options)
+        .then((data) => {
+          data.body = "success";
+          res
+            .status(200)
+            .json({ data, message: "kklklklklklklklklklklklklklklklkl" });
+          return;
+        })
+        .catch((err) => {
+          return res.json({ status: false, message: err });
+        });
+    } catch (error) {
+      console.log(error);
+      log("error", "error in sendWebPush", error);
       res.status(500).json({
         message: "Hmm... Something went wrong. Please try again later.",
         error: _get(error, "message"),

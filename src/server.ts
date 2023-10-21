@@ -17,7 +17,12 @@ export const agendaInstance = new Agenda({
   db: { address: process.env.AGENDA_STRING, collection: "agendaJobs" },
   processEvery: "5 seconds",
 });
-
+export const io = require("socket.io")({
+  pingTimeout: 60000,
+  cors: {
+    origin: "*",
+  },
+});
 connectDb()
   .then(async () => {
     App.start(serverPort);
@@ -26,7 +31,15 @@ connectDb()
         `App listening on environment "${process.env.NODE_ENV}" ${serverPort}`
       );
     });
+    io.attach(server);
+    // io.on("connection", (socket) => {
+    //   console.log("connection");
 
+    //   socket.on("setup", (userId) => {
+    //     socket.join(userId);
+    //     socket.emit("connected", userId);
+    //   });
+    // });
     const agendaJobs = await getAgendaTrack();
 
     for await (const value of agendaJobs) {
@@ -58,31 +71,31 @@ connectDb()
         console.log(err);
       });
     })();
-    const io = require("socket.io")(server, {
-      pingTimeout: 60000,
-      cors: {
-        origin: "http://localhost:3001",
-        // credentials: true,
-      },
-    });
+    // const io = require("socket.io")(server, {
+    //   pingTimeout: 60000,
+    //   cors: {
+    //     origin: "http://localhost:3001",
+    //     // credentials: true,
+    //   },
+    // });
 
     io.on("connection", (socket) => {
       console.log("Connected to socket.io");
 
-      socket.on("setup", (userId) => {
-        socket.join(userId);
+      // socket.on("setup", (userId) => {
+      //   socket.join(userId);
         //send callback that user connected
-        socket.emit("connected", userId);
-      });
+        socket.emit("connected", "jh2qjehqj");
+      // });
 
-      socket.on("new request", (newConnection: IIncomingConnection) => {
-        if (!newConnection.targetAccount.account)
-          return console.log("User not found!");
+      // socket.on("new request", (newConnection: IIncomingConnection) => {
+      //   if (!newConnection.targetAccount.account)
+      //     return console.log("User not found!");
 
-        socket
-          .in(newConnection.targetAccount.account)
-          .emit("new request received", newConnection);
-      });
+      //   socket
+      //     .in(newConnection.targetAccount.account)
+      //     .emit("new request received", newConnection);
+      // });
     });
   })
   .catch((error) => {

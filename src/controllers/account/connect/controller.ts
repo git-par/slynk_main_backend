@@ -2,6 +2,7 @@ import { Response } from "express";
 import Joi, { isError } from "joi";
 // import { isArray } from "lodash";
 import { get as _get } from "lodash";
+import { io } from "../../../server";
 // import { log } from "winston";
 import { getAccountById } from "../../../modules/account";
 import {
@@ -127,6 +128,9 @@ export default class Controller {
           isSlynkUser: true,
         })
       );
+      console.log({ newConnect }, "?????????????");
+
+      io.emit("saveConnection", newConnect);
 
       res.status(200).json({
         newConnect,

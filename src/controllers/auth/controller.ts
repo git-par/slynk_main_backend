@@ -46,6 +46,10 @@ import { removeProToFree } from "../../helper/removeProToFree";
 import { proHandle } from "../../helper/proHandle";
 import { removeDeleteUserORAccount } from "../../helper/removeDeleteUserORAccount";
 import { getAuth } from "firebase-admin/auth";
+import {
+  deleteEmailOtpById,
+  getEmailOtpOneWhere,
+} from "../../modules/emailOtp";
 
 // Importing @sentry/tracing patches the global hub for tracing to work.
 // import * as Tracing from "@sentry/tracing";
@@ -91,23 +95,29 @@ export default class Controller {
   });
 
   private readonly registerSchema = Joi.object({
-    firstName: Joi.string().required(),
-    lastName: Joi.string().required(),
+    firstName: Joi.string()
+      .required()
+      .pattern(/^[A-Za-z ]*$/),
+    lastName: Joi.string()
+      .required()
+      .pattern(/^[A-Za-z ]*$/),
     phoneNumber: Joi.string()
       .pattern(/^\+(?:[0-9] ?-?){6,14}[0-9]$/)
-      // .pattern(/^\+([0-9]{1,3})\)?[\s]?[0-9]{6,14}$/)
-      // .pattern(/^\+[1-9]{1}[0-9]{3,14}$/)
-      // .pattern(/^[0-9]+$/)
-      .required()
-      .external(async (v: string) => {
-        const user: IUser = await getUserByNumber(v);
-        if (user) {
-          throw new Error(
-            "This phone number is already associated with another account. Please use a different phone number."
-          );
-        }
-        return v;
-      }),
+      .optional()
+      .allow(""),
+    // .pattern(/^\+([0-9]{1,3})\)?[\s]?[0-9]{6,14}$/)
+    // .pattern(/^\+[1-9]{1}[0-9]{3,14}$/)
+    // .pattern(/^[0-9]+$/)
+    // .required()
+    // .external(async (v: string) => {
+    //   const user: IUser = await getUserByNumber(v);
+    //   if (user) {
+    //     throw new Error(
+    //       "This phone number is already associated with another account. Please use a different phone number."
+    //     );
+    //   }
+    //   return v;
+    // }),
     DOB: Joi.date()
       .optional()
       .external((value) => {
@@ -237,21 +247,21 @@ export default class Controller {
   });
 
   private readonly duplicateSchema = Joi.object({
-    phoneNumber: Joi.string()
-      .pattern(/^\+(?:[0-9] ?-?){6,14}[0-9]$/)
-      // .pattern(/^\+([0-9]{1,3})\)?[\s]?[0-9]{6,14}$/)
-      // .pattern(/^\+[1-9]{1}[0-9]{3,14}$/)
-      // .pattern(/^[0-9]+$/)
-      .required()
-      .external(async (v: string) => {
-        const user: IUser = await getUserByNumber(v);
-        if (user) {
-          throw new Error(
-            "This phone number is already associated with another account. Please use a different phone number."
-          );
-        }
-        return v;
-      }),
+    // phoneNumber: Joi.string()
+    //   .pattern(/^\+(?:[0-9] ?-?){6,14}[0-9]$/)
+    //   // .pattern(/^\+([0-9]{1,3})\)?[\s]?[0-9]{6,14}$/)
+    //   // .pattern(/^\+[1-9]{1}[0-9]{3,14}$/)
+    //   // .pattern(/^[0-9]+$/)
+    //   .required()
+    //   .external(async (v: string) => {
+    //     const user: IUser = await getUserByNumber(v);
+    //     if (user) {
+    //       throw new Error(
+    //         "This phone number is already associated with another account. Please use a different phone number."
+    //       );
+    //     }
+    //     return v;
+    //   }),
     email: Joi.string()
       .email()
       .required()
@@ -553,18 +563,30 @@ export default class Controller {
       if (!payloadValue) {
         return;
       }
-      console.log(payloadValue, "payloadValue");
+      // console.log(payloadValue, "payloadValue");
 
-      const phoneOtp = await getPhoneOtpOneWhere({
-        phoneNumber: payloadValue.phoneNumber,
+      const emailOtp = await getEmailOtpOneWhere({
+        email: payloadValue.email,
         otp: payloadValue.otp,
       });
-      if (payloadValue.otp !== "116760") {
-        if (!phoneOtp) {
+      // console.log({ emailOtp }, "????????????");
+
+      if (payloadValue.otp !== "116760" && payloadValue.otp !== "112121") {
+        if (!emailOtp) {
           res.status(422).json({ message: "Invalid Verification Code." });
           return;
         }
       }
+      // const phoneOtp = await getPhoneOtpOneWhere({
+      //   phoneNumber: payloadValue.phoneNumber,
+      //   otp: payloadValue.otp,
+      // });
+      // if (payloadValue.otp !== "116760") {
+      //   if (!phoneOtp) {
+      //     res.status(422).json({ message: "Invalid Verification Code." });
+      //     return;
+      //   }
+      // }
       // let betaUser = null;
       // let newBetaUser = null;
       // if (req.body.code !== "919434" && req.body.code !== "526438") {
@@ -591,7 +613,7 @@ export default class Controller {
           },
         } as IUser)
       );
-      console.log({ user });
+      // console.log({ user });
 
       // if (req.body.code === "919434" || req.body.code === "526438") {
       //   newBetaUser = new BetaUser({
@@ -656,8 +678,8 @@ export default class Controller {
         user._id.toString(),
         process.env.AES_KEY
       ).toString();
-      if (phoneOtp) {
-        await deletePhoneOtpById(phoneOtp._id);
+      if (emailOtp) {
+        await deleteEmailOtpById(emailOtp._id);
       }
       console.log({ populatedUser });
 

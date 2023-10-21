@@ -25,6 +25,7 @@ export interface IUser {
   // betaUser: string | IBetaUser;
   isPro?: boolean;
   isAdminPro?: boolean;
+  isCancelSub?: boolean;
   isInAppPro?: boolean;
   isFreePro?: boolean;
   isFreeUsed?: boolean;
@@ -54,8 +55,8 @@ export interface IUser {
   };
   subscriptionTill?: Date;
   trialEndDate?: Date;
-  pwaShow?: boolean; 
-  dragOff?: boolean; 
+  pwaShow?: boolean;
+  dragOff?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -124,6 +125,7 @@ export class User implements IUser {
   trialEndDate?: Date;
   pwaShow?: boolean;
   dragOff?: boolean;
+  isCancelSub?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
   constructor(input?: IUser) {
@@ -154,6 +156,7 @@ export class User implements IUser {
     this.isBetaFirstVisit = input.isBetaFirstVisit;
     this.isPrivacyAccepted = input.isPrivacyAccepted;
     this.phoneNumber = input.phoneNumber;
+    this.isCancelSub = input.isCancelSub;
     this.userType =
       input.userType === "ADMIN" ||
       input.userType === "USER" ||

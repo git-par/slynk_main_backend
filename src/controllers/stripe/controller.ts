@@ -144,7 +144,10 @@ export default class Controller {
 
       const user = req.authUser;
       console.log({ user });
-
+      const subscribedUser = await getUserById(user._id);
+      // if (subscribedUser.isCancelSub) {
+      //   res.status(200).json({ flag: true });
+      // } else {
       const { data } = await stripeInstance().subscriptions.list({
         customer: user.stripeAccount,
       });
@@ -167,9 +170,58 @@ export default class Controller {
           // await stripeInstance().subscriptions.del(item.id);
         })
       );
+      subscribedUser.isCancelSub = true;
+      await updateUser(new User(subscribedUser));
+      res.status(200).json({ flag: true });
       res.status(200).json({
         message: "Success",
       });
+      // }
+    } catch (e) {
+      // Display error on client
+      return res.send({ error: e.message });
+    }
+  };
+
+  protected readonly checkSub = async (req: Request, res: Response) => {
+    try {
+      console.log("cancle subscription");
+
+      const user = req.authUser;
+      console.log({ user });
+      const subscribedUser = await getUserById(user._id);
+      if (subscribedUser.isCancelSub) {
+        res.status(200).json({ flag: true });
+      } else {
+        // const { data } = await stripeInstance().subscriptions.list({
+        //   customer: user.stripeAccount,
+        // });
+
+        // console.log(user.stripeAccount);
+        // /* eslint-disable @typescript-eslint/no-explicit-any */
+        // const subList = data.map((item: any) => {
+        //   return {
+        //     status: item.status,
+        //     id: item.id,
+        //   };
+        // });
+
+        // await Promise.allSettled(
+        //   /* eslint-disable @typescript-eslint/no-explicit-any */
+        //   subList.map(async (item: any) => {
+        //     stripeInstance().subscriptions.update(item.id, {
+        //       cancel_at_period_end: true,
+        //     });
+        //     // await stripeInstance().subscriptions.del(item.id);
+        //   })
+        // );
+        // subscribedUser.isCancelSub = true;
+        // await updateUser(new User(subscribedUser));
+        res.status(200).json({ flag: true });
+        // res.status(200).json({
+        //   message: "Success",
+        // });
+      }
     } catch (e) {
       // Display error on client
       return res.send({ error: e.message });

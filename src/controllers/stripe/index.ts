@@ -27,6 +27,7 @@ export default class Stripe extends Controller {
     this.router.all("/webhook", this.paymentWebhook);
     this.router.post("/pay", validateAuthIdToken, this.pay);
     this.router.post("/cancelSub", this.cancelSub);
+    this.router.post("/checkSub",validateAuthIdToken, this.checkSub);
     // this.router.post("/cancelSub", validateAuthIdToken, this.cancelSub);
   }
 }

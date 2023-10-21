@@ -46,6 +46,10 @@ const user = new Schema<IUser>(
       type: Boolean,
       default: false,
     },
+    isCancelSub: {
+      type: Boolean,
+      default: false,
+    },
     isFreePro: {
       type: Boolean,
       default: false,
