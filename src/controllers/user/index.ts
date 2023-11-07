@@ -39,6 +39,7 @@ export default class User extends Controller {
     this.router.post("/send_phone_otp", this.sendOtpToPhoneNo);
     this.router.post("/send_otp", this.sendOtp);
     this.router.post("/send_email_otp", this.sendEmailOtp);
+    this.router.post("/send_email_otp_admin", this.sendEmailOtpForAdmin);
     this.router.post("/verify_otp", this.verifyOtp);
     this.router.post("/forget_password", this.forgetPassword);
     this.router.post("/change_password", this.changePassword);

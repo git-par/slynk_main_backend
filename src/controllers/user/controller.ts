@@ -1021,6 +1021,92 @@ export default class Controller {
       });
     }
   };
+  protected readonly sendEmailOtpForAdmin = async (
+    req: Request,
+    res: Response
+  ) => {
+    // console.log(">>>>>>>>>>>>>>>>>>>>");
+
+    try {
+      // console.log("????????????????????????");
+
+      const validationResult = this.emailSchema.validate(req.body);
+      if (validationResult.error) {
+        res.status(422).json(validationResult.error);
+        return;
+      }
+      const otp = Math.random().toString().substring(2, 8);
+
+      const user = await getUserByEmail(validationResult.value.email);
+      if (!user) {
+        res.status(401).json({
+          message: "Entered email has not been registered in slynk account!",
+        });
+        return;
+      }
+
+      // if (!user.googleLogin) {
+      //   return res.status(400).json({
+      //     message: "you haven't login with google",
+      //   });
+      // }
+      // const otp = Math.random().toFixed(6).substr(-6);
+      // console.log(user, ">>>>>>>>>>>>>>");
+
+      if (user.userType == "ADMIN" || user.userType == "SUPER ADMIN") {
+        const emailOtp = await saveEmailOtp(
+          new EmailOtp({
+            otp: otp,
+            email: validationResult.value.email,
+          })
+        );
+        const result = await SendMail(
+          process.env.MAIL_NO_REPLY,
+          validationResult.value.email,
+          "Slynk : Verified Email Code",
+          `<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>OTP Email</title>
+        </head>
+        <body>
+            <h1>Your One-Time Password (OTP)</h1>
+            <p>Dear user,</p>
+            <p>Your OTP for authentication is: <strong>${otp}</strong></p>
+            <p>Please use this OTP to complete your action.</p>
+            <p>If you didn't request this OTP, please ignore this email.</p>
+            <p>Best regards,<br>Your App Team</p>
+        </body>
+        </html>`
+        ).catch((error) => {
+          console.log(error);
+          Sentry.captureException(error);
+          res.status(224).json({ message: "Something went Wrong." });
+          return;
+        });
+        if (!result) {
+          console.log("error in sending mail in sendOtp api");
+          return;
+        }
+        return res.status(200).json({
+          message:
+            "Verification code has been sent to your email. If you don't see the email, please check your spam / junk folder.",
+        });
+      } else {
+        res.status(500).json({ message: "Something went Wrong." });
+        return;
+      }
+    } catch (error) {
+      console.log(error);
+      Sentry.captureException(error);
+      log("error", "error in sendOtp", error);
+      res.status(500).json({
+        message: "Hmm... Something went wrong. Please try again later.",
+        error: _get(error, "message"),
+      });
+    }
+  };
 
   protected readonly verifyOtp = async (req: Request, res: Response) => {
     try {
