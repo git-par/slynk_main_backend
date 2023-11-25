@@ -4,6 +4,7 @@ import { getUserById, IUser, updateUser, User } from "../modules/user";
 import { stripeInstance } from "./stripe";
 
 export const proHandle = async (user: IUser) => {
+  console.log({ user });
   const { data } = await stripeInstance()
     .subscriptions.list({
       customer: user.stripeAccount,

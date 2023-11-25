@@ -13,3 +13,5 @@ export * from "./getSortedTags";
 export * from "./getTags";
 export * from "./getTagsCount";
 export * from "./getTagsByAccountIdForAPI";
+export * from "./getTagWithDeleteRequest";
+export * from "./deleteTag";

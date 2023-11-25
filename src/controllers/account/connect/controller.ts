@@ -18,6 +18,7 @@ import {
 import { Request } from "../../../request";
 
 import * as Sentry from "@sentry/node";
+import { sendNotification } from "../../../helper/notification";
 // import { _addTracingExtensions } from "@sentry/tracing/dist/hubextensions";
 
 // Importing @sentry/tracing patches the global hub for tracing to work.
@@ -74,6 +75,17 @@ export default class Controller {
     const newConnect = connects.filter(
       (item) => !_get(item, "targetAccount.account.isArchive")
     );
+    // let notificationObj = {
+    //   tokens: [payloadValue.pushToken],
+    //   notification: {
+    //     title: "🎉 Sign-up Successful! 🎉",
+    //     body: "🎉 Welcome to ScaleUp! It's the perfect time to unleash your creativity and bring your ideas to life with Upscale creation. Start exploring now! You got 3 Pixels free...",
+    //   },
+    //   data: {
+    //     type: "google Sign-up notification",
+    //   },
+    // };
+    // await sendNotification(notificationObj);
     res.status(200).json(newConnect);
   };
 
@@ -128,7 +140,7 @@ export default class Controller {
           isSlynkUser: true,
         })
       );
-      console.log({ newConnect }, "?????????????");
+      // console.log({ newConnect }, "?????????????");
 
       io.emit("saveConnection", newConnect);
 
@@ -179,6 +191,8 @@ export default class Controller {
   // };
 
   protected readonly delete = async (req: Request, res: Response) => {
+    // console.log(req.authUser,">>>>>>>>>>>>>>>>>>>>>>>>>>>");
+    const user=req.authUser
     const _id = req.params._id;
     const accountId = req.currentAccountId;
     if (!_id) {
@@ -195,6 +209,14 @@ export default class Controller {
       return;
     }
     await deleteConnect(connect._id);
+    let notificationObj = {
+      tokens: [...user.FCMToken],
+      notification: {
+        title: "Dalle - create art with api",
+        body: "🎉 Welcome to Dalle! It's the perfect time to unleash your creativity and bring your ideas to life with text-to-image creation. Start exploring now!",
+      },
+    };
+    await sendNotification(notificationObj);
     res.status(200).json({
       message: `${connect.firstName} was Successfully removed from your Connect.`,
     });

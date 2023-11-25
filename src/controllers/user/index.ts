@@ -92,5 +92,24 @@ export default class User extends Controller {
     this.router.patch("/:id", validateAuthIdToken, this.updateUser);
     this.router.get("/isPrivate/:id", this.checkIsPrivate);
     this.router.post("/sendWebPush", this.sendWebPush);
+
+    this.router.get(
+      "/deleteUser",
+      validateAuthIdToken,
+      validateIsAdmin,
+      this.getUserWithDeleteRequest
+    );
+    this.router.delete(
+      "/deleteUser/:id",
+      validateAuthIdToken,
+      validateIsAdmin,
+      this.deleteUserBeforeTime
+    );
+    this.router.post(
+      "/recover/:id",
+      validateAuthIdToken,
+      validateIsAdmin,
+      this.recoverUser
+    );
   }
 }

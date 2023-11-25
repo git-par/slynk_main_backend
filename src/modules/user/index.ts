@@ -9,3 +9,5 @@ export * from "./getUserByNumber";
 export * from "./getUserByAccountId";
 export * from "./deleteUser";
 export * from "./getUsers";
+export * from "./getUserWithDeleteRequest";
+export * from "./getUserWithoutDeleteRequest";

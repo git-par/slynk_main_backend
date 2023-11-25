@@ -23,7 +23,8 @@ export const googleWalletGeneric = async (accountId: string) => {
       .replace(/[^\w.-]/g, "_")}-${classId}`,
     classId: `${issuerId}.${classId}`,
     genericType: "GENERIC_TYPE_UNSPECIFIED",
-    hexBackgroundColor: "#428124",
+    hexBackgroundColor: account.rsb || "#428124",
+    // hexBackgroundColor: "#428124",
     logo: {
       sourceUri: {
         uri: process.env.DEFAULT_N_SLYNK_LOGO,
@@ -51,15 +52,15 @@ export const googleWalletGeneric = async (accountId: string) => {
       type: "QR_CODE",
       value: process.env.APP_LAUNCH_URL + "/gwc/" + account.accountName,
     },
-    heroImage: {
-      sourceUri: {
-        uri: account.googleWalletPicId
-          ? // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            //@ts-ignore
-            account.googleWalletPicId.url
-          : process.env.DEFAULT_URL,
-      },
-    },
+    // heroImage: {
+    //   sourceUri: {
+    //     uri: account.googleWalletPicId
+    //       ? // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    //         //@ts-ignore
+    //         account.googleWalletPicId.url
+    //       : process.env.DEFAULT_URL,
+    //   },
+    // },
     textModulesData: [
       {
         header: account.companyName ? "Company Name" : "",

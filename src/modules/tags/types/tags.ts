@@ -42,6 +42,7 @@ export interface ITag {
   blockMessage?: string;
   tagImage?: IImage | string;
   tagGif?: IImage | string;
+  deleteRequest?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -66,6 +67,7 @@ export class Tag implements ITag {
   label?: string;
   tagImage?: IImage | string;
   tagGif?: IImage | string;
+  deleteRequest?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 
@@ -87,6 +89,7 @@ export class Tag implements ITag {
     this.label = input.label;
     this.tagImage = input.tagImage;
     this.tagGif = input.tagGif;
+    this.deleteRequest = input.deleteRequest;
     this.createdAt = input.createdAt;
     this.updatedAt = input.updatedAt;
   }

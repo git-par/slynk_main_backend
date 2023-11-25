@@ -14,6 +14,8 @@ import {
   getTags,
   getTagsCount,
   getTagsByAccountIdForAPI,
+  getTagWithDeleteRequest,
+  deleteTag,
 } from "../../modules/tags";
 import { Tag as TagType } from "../../modules/tags";
 import { QRColorType, QRTypeCode } from "../../modules/tags";
@@ -674,6 +676,94 @@ export default class Controller {
       res.status(500).json({
         message: "Hmm... Something went wrong. Please try again later.",
         error: isError(error) ? error.toString().replace("Error:", "") : error,
+      });
+    }
+  };
+
+  protected readonly getTagWithDeleteRequest = async (
+    req: Request,
+    res: Response
+  ) => {
+    try {
+      const tags = await getTagWithDeleteRequest();
+      res.status(200).json(tags);
+    } catch (error) {
+      console.log(error);
+      log("error", "error in getTagWithDeleteRequest", error);
+      res.status(500).json({
+        message: "Hmm... Something went wrong. Please try again later.",
+        error: _get(error, "message"),
+      });
+    }
+  };
+
+  protected readonly deleteTagPermanently = async (
+    req: Request,
+    res: Response
+  ) => {
+    try {
+      const tagId = req.params.id;
+      if (!tagId) {
+        return res.status(422).json("Please provide tagId");
+      }
+      const tag = await getTagsById(tagId);
+      if (!tag) {
+        return res.status(422).json("Invalid tagId");
+      }
+
+      await deleteTag(tag._id);
+      return res.status(200).json("Tag has been deleted permanently");
+    } catch (error) {
+      console.log(error);
+      log("error", "error in deleteTagPermanently", error);
+      res.status(500).json({
+        message: "Hmm... Something went wrong. Please try again later.",
+        error: _get(error, "message"),
+      });
+    }
+  };
+
+  protected readonly deleteTag = async (req: Request, res: Response) => {
+    try {
+      const tagId = req.params.id;
+      if (!tagId) {
+        return res.status(422).json("Please provide tagId");
+      }
+      const tag = await getTagsById(tagId);
+      if (!tag) {
+        return res.status(422).json("Invalid tagId");
+      }
+      tag.deleteRequest = true;
+      await updateTags(tag);
+      return res.status(200).json("Tag deleted successfully");
+    } catch (error) {
+      console.log(error);
+      log("error", "error in deleteTag", error);
+      res.status(500).json({
+        message: "Hmm... Something went wrong. Please try again later.",
+        error: _get(error, "message"),
+      });
+    }
+  };
+
+  protected readonly recoverTag = async (req: Request, res: Response) => {
+    try {
+      const tagId = req.params.id;
+      if (!tagId) {
+        return res.status(422).json("Please provide tagId");
+      }
+      const user = await getTagsById(tagId);
+      if (!user) {
+        return res.status(422).json("Invalid tagId");
+      }
+
+      return res.status(200).json("Tag recovered successfully");
+    } catch (error) {
+      console.log(error);
+      log("error", "error in recoverTag", error);
+      res.status(500).json({
+        message: "Hmm... Something went wrong. Please try again later.",
+        error: _get(error, "message"),
       });
     }
   };

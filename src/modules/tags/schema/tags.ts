@@ -59,6 +59,10 @@ const tag = new Schema<ITag>(
       ref: "image",
       default: null,
     },
+    deleteRequest: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );

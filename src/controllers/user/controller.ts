@@ -15,6 +15,9 @@ import {
   User,
   getUserByNumber,
   getUsers,
+  getUserWithDeleteRequest,
+  getUserWithoutDeleteRequest,
+  deleteUser,
 } from "../../modules/user";
 import * as ejs from "ejs";
 import { getUserByResetToken } from "../../modules/user/getUserByResetToken";
@@ -44,6 +47,12 @@ import {
   getEmailOtpOneWhere,
   saveEmailOtp,
 } from "../../modules/emailOtp";
+import Agenda from "agenda";
+import { agendaInstance } from "../../server";
+import {
+  deleteAgendaTrack,
+  getAgendaTrackByName,
+} from "../../modules/agendaTrack";
 
 // Importing @sentry/tracing patches the global hub for tracing to work.
 // import * as Tracing from "@sentry/tracing";
@@ -678,7 +687,7 @@ export default class Controller {
   };
 
   protected readonly getAllUser = async (req: Request, res: Response) => {
-    const users = (await getUsers())
+    const users = (await getUserWithoutDeleteRequest())
       .filter(
         (user) =>
           user._id.toString() !== get(req, "authUser._id", "").toString()
@@ -705,7 +714,7 @@ export default class Controller {
           "createdAt",
         ]);
       });
-    res.status(200).json(users);
+    return res.status(200).json(users);
   };
 
   protected readonly forgetPassword = async (req: Request, res: Response) => {
@@ -1419,7 +1428,9 @@ export default class Controller {
           res.status(422).json({ message: error.message });
           return;
         });
-
+      const user = await getUserById(_id);
+      user.deleteRequest = true;
+      await updateUser(new User(user));
       res.clearCookie("admin_auth", {
         //httpOnly: true,
         // domain: "slynk.app",
@@ -1818,5 +1829,82 @@ export default class Controller {
         error: _get(error, "message"),
       });
     }
+  };
+
+  protected readonly getUserWithDeleteRequest = async (
+    req: Request,
+    res: Response
+  ) => {
+    const users = (await getUserWithDeleteRequest())
+      .filter(
+        (user) =>
+          user._id.toString() !== get(req, "authUser._id", "").toString()
+      )
+      .filter((user) => user.userType !== "SUPER ADMIN")
+      .map((user) => {
+        return pick(user, [
+          "_id",
+          "email",
+          "userType",
+          "deleteRequest",
+          "isPro",
+          "suspend",
+          "subscriptionTill",
+          "firstName",
+          "lastName",
+          "phoneNumber",
+          "googleLogin",
+          "isFirstVisit",
+          "isBetaFirstVisit",
+          "isPrivacyAccepted",
+          "gender",
+          "DOB",
+          "createdAt",
+        ]);
+      });
+    res.status(200).json(users);
+  };
+
+  protected readonly deleteUserBeforeTime = async (
+    req: Request,
+    res: Response
+  ) => {
+    const userId = req.params.id;
+    if (!userId) {
+      return res.status(422).json("Please provide userId");
+    }
+    const user = await getUserById(userId);
+    if (!user) {
+      return res.status(422).json("Invalid userId");
+    }
+
+    const existingJob = await agendaInstance.jobs({
+      name: `USER_DELETE_${userId}`,
+    });
+    await agendaInstance.cancel({ name: existingJob[0].attrs.name });
+
+    await deleteUser(user._id);
+    return res.status(200).json("User deleted successfully");
+  };
+
+  protected readonly recoverUser = async (req: Request, res: Response) => {
+    const userId = req.params.id;
+    if (!userId) {
+      return res.status(422).json("Please provide userId");
+    }
+    const user = await getUserById(userId);
+    if (!user) {
+      return res.status(422).json("Invalid userId");
+    }
+
+    const existingJob = await agendaInstance.jobs({
+      name: `USER_DELETE_${userId}`,
+    });
+    await agendaInstance.cancel({ name: existingJob[0].attrs.name });
+
+    user.deleteRequest = false;
+    await updateUser(new User(user));
+
+    return res.status(200).json("User recovered successfully");
   };
 }

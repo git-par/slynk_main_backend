@@ -342,6 +342,7 @@ export default class Controller {
       }
 
       const payloadValue = this.loginSchema.validate(payload).value;
+
       // find user by email
       let user: User;
       if (payloadValue.userName.type === "EMAIL") {
@@ -655,7 +656,6 @@ export default class Controller {
           recentColor: [],
         })
       );
-      console.log({ account });
 
       // link account to user
       user.accounts = [account._id];
@@ -681,7 +681,6 @@ export default class Controller {
       if (emailOtp) {
         await deleteEmailOtpById(emailOtp._id);
       }
-      console.log({ populatedUser });
 
       res
         .cookie("auth", token, {
@@ -705,7 +704,6 @@ export default class Controller {
   protected readonly loginWithGoogle = async (req: Request, res: Response) => {
     try {
       const payload = req.body;
-      console.log("payload", payload);
 
       const payloadValue = await this.loginWithGoogleSchema
         .validateAsync(payload)
@@ -1144,7 +1142,7 @@ export default class Controller {
         return;
       }
       const user = await getUserByNumber(validationResult.value.phoneNumber);
-      console.log(user, "???????????????????");
+      // console.log(user, "???????????????????");
 
       if (!user) {
         res.status(422).json({

@@ -36,6 +36,8 @@ import Report from "./controllers/report";
 import ReportType from "./controllers/reportType";
 import Analytics from "./controllers/analytics";
 import { firebase } from "./helper/firebase";
+import GoogleWallet from "./controllers/googleWallet";
+
 
 export default class App {
   public static instance: express.Application;
@@ -154,6 +156,10 @@ export default class App {
       validateAuthIdToken,
       new ReportType().router
     );
+
+    this.instance.use("/googleWallet", new GoogleWallet().router);
+
+
     this.instance.use("/analytics", new Analytics().instance);
   }
 }

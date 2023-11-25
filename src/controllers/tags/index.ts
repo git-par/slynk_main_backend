@@ -20,6 +20,12 @@ export default class Tags extends Controller {
       this.getSortedTag
     );
     this.router.get("", validateConnectAuthIdToken, this.getTagsByPagination);
+    this.router.get(
+      "/deleteTag",
+      validateAuthIdToken,
+      validateIsAdmin,
+      this.getTagWithDeleteRequest
+    );
     this.router.get("/:urlName", validateConnectAuthIdToken, this.get);
     this.router.post("/block/:urlName", validateAuthIdToken, this.blockTag);
     this.router.post("/free/:urlName", validateAuthIdToken, this.freeTag);
@@ -35,6 +41,24 @@ export default class Tags extends Controller {
       validateAuthIdToken,
       validateIsAdmin,
       this.getTagByAccId
+    );
+    this.router.delete(
+      "/deleteTag/:id",
+      validateAuthIdToken,
+      validateIsAdmin,
+      this.deleteTagPermanently
+    );
+    this.router.delete(
+      "/:id",
+      validateAuthIdToken,
+      validateIsAdmin,
+      this.deleteTag
+    );
+    this.router.post(
+      "/recover/:id",
+      validateAuthIdToken,
+      validateIsAdmin,
+      this.recoverTag
     );
   }
 }
