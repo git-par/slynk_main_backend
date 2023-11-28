@@ -17,6 +17,8 @@ export interface IAccountLink {
   logo: IImage | string;
   label?: string;
   links: { accountLink: string | IAccountLink; show: boolean }[];
+  extraTitle?: string;
+  extraDescription?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -34,6 +36,8 @@ export class AccountLink implements IAccountLink {
   logo: IImage | string;
   label?: string;
   links: { accountLink: string | IAccountLink; show: boolean }[];
+  extraTitle?: string;
+  extraDescription?: string;
   createdAt?: Date;
   updatedAt?: Date;
   constructor(input?: IAccountLink) {
@@ -59,6 +63,8 @@ export class AccountLink implements IAccountLink {
     this.fileType = input.fileType;
     this.label = input.label;
     this.links = isArray(input.links) ? input.links : [];
+    this.extraTitle = input.extraTitle;
+    this.extraDescription = input.extraDescription;
     this.createdAt = input.createdAt;
     this.updatedAt = input.updatedAt;
   }

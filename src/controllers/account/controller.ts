@@ -13,13 +13,13 @@ import {
   getLiteAccountByIdQr,
   getAccountByQuery,
   getAccByAccNameFromQuery,
+  getAccountByAccountName,
 } from "../../modules/account";
 import { Account as AccountType } from "../../modules/account";
 import { getUserById, updateUser, User } from "../../modules/user";
-import { deleteImage, getImageById } from "../../modules/image";
+import { getImageById } from "../../modules/image";
 import { getPopulatedConnectByAccountId } from "../../modules/connect";
 import { getPersonalConnectionByAccountId } from "../../modules/personalConnection";
-import { getAccountByAccountName } from "../../modules/account/getAccountByAccountName";
 import { getTagsByAccountId } from "../../modules/tags/getTagsByAccountId";
 
 import * as Sentry from "@sentry/node";
@@ -32,6 +32,8 @@ import { apnProvider } from "../../helper/apnProvider";
 import apn from "apn";
 import { agendaDeleteAccount } from "../../helper/agendaDeleteAccount";
 import moment from "moment";
+import { googleWalletGeneric } from "../../helper/googleWalletGeneric";
+import { getTagByUniqueUrl } from "../../modules/tags";
 // Importing @sentry/tracing patches the global hub for tracing to work.
 // import * as Tracing from "@sentry/tracing";
 
@@ -52,6 +54,17 @@ export default class Controller {
     //   TODO: validate image when image module will implement
     profileImage: Joi.string()
       .optional()
+      .external(async (v: string) => {
+        if (!v) return v;
+        const image = await getImageById(v);
+        if (!image) {
+          throw new Error("Please provide valid image for profile image.");
+        }
+        return v;
+      }),
+    googleWalletPicId: Joi.string()
+      .optional()
+      .allow(null)
       .external(async (v: string) => {
         if (!v) return v;
         const image = await getImageById(v);
@@ -116,6 +129,8 @@ export default class Controller {
       }),
     isDiscoverable: Joi.boolean().optional(),
     isArchive: Joi.boolean().optional(),
+    dragOff: Joi.boolean().optional(),
+    linkDarkMode: Joi.boolean().optional(),
 
     // .external(async (v: string) => {
     //   if (!v) return v;
@@ -180,7 +195,12 @@ export default class Controller {
     try {
       const _id = req.params._id;
       if (!_id && req.isAdmin) {
-        const accounts = await getLiteAccountsForAdmin();
+        const { page } = req.query;
+        const accounts = await getLiteAccountsForAdmin(
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          //@ts-ignore
+          parseInt(page)
+        );
         res.status(200).json(accounts);
         return;
       }
@@ -277,8 +297,12 @@ export default class Controller {
           const accounts = await getAccountsByAccountName(result);
           if (accounts.length >= 1) {
             continue;
+          } else {
+            const tagURL = await getTagByUniqueUrl(result);
+            if (tagURL) {
+              continue;
+            }
           }
-
           payloadValue.accountName = result;
           break;
         }
@@ -302,8 +326,12 @@ export default class Controller {
           );
           if (accounts.length >= 1) {
             continue;
+          } else {
+            const tagURL = await getTagByUniqueUrl(val.replace(/\s/g, ""));
+            if (tagURL) {
+              continue;
+            }
           }
-
           payloadValue.accountName = val.replace(/\s/g, "");
           break;
         }
@@ -377,6 +405,12 @@ export default class Controller {
         const aws = await getAccountByAccountName(
           payloadValue.accountName.replace(/\s/g, "")
         );
+        const tagURL = await getTagByUniqueUrl(
+          payloadValue.accountName.replace(/\s/g, "")
+        );
+        if (tagURL) {
+          throw new Error("accountName is already taken");
+        }
         if (aws) {
           if (aws._id.toString() !== _id.toString()) {
             throw new Error("accountName is already taken");
@@ -467,6 +501,8 @@ export default class Controller {
         );
       }
 
+      const walletData = await googleWalletGeneric(populatedAcc._id.toString());
+      console.log("walletData", walletData);
       return;
     } catch (error) {
       console.log(error);

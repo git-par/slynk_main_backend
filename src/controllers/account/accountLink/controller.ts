@@ -57,6 +57,8 @@ export default class Controller {
     value: Joi.string().required(),
     fileType: Joi.string().optional(),
     label: Joi.string().optional().allow(""),
+    extraTitle: Joi.string().optional().allow(""),
+    extraDescription: Joi.string().optional().allow(""),
     account: Joi.string()
       .required()
       .external(async (val: string) => {
@@ -83,6 +85,8 @@ export default class Controller {
     account: Joi.string().optional().allow(""),
     label: Joi.string().optional().allow(""),
     links: Joi.array().optional(),
+    extraTitle: Joi.string().optional().allow(""),
+    extraDescription: Joi.string().optional().allow(""),
     logo: Joi.string()
       .optional()
       .external(async (v: string) => {
@@ -172,6 +176,8 @@ export default class Controller {
           label: value.label,
           links: value.links,
           fileType: value.fileType,
+          extraTitle: value.extraTitle,
+          extraDescription: value.extraDescription,
         };
         return { payload: value, accountLink: new AccountLink(toBeInsert) };
       })
@@ -191,6 +197,7 @@ export default class Controller {
       })
       .then(async ({ accountLink }) => {
         const accountPopulatedLink = await getAccountLinkById(accountLink._id);
+
         res.status(200).send(accountPopulatedLink.toJSON());
       })
       .catch((error) => {

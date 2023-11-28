@@ -7,62 +7,73 @@ import {
   updateAccountLink,
 } from "..";
 
-const accountLink = new Schema<IAccountLink>({
-  link: {
-    type: Types.ObjectId,
-    ref: "links",
-    required: true,
-  },
-  profileShow: {
-    type: Boolean,
-    default: true,
-  },
-  cardShow: {
-    type: Boolean,
-    default: true,
-  },
-  displayOnTop: {
-    type: Boolean,
-    default: false,
-  },
-  value: {
-    type: String,
-    required: true,
-  },
-  label: {
-    type: String,
-  },
-  account: {
-    type: Types.ObjectId,
-    ref: "accounts",
-    required: true,
-  },
-  links: [
-    {
-      accountLink: {
-        type: Types.ObjectId,
-        ref: "account_links",
-      },
-      show: {
-        type: Boolean,
-        default: true,
-      },
+const accountLink = new Schema<IAccountLink>(
+  {
+    link: {
+      type: Types.ObjectId,
+      ref: "links",
+      required: true,
     },
-  ],
-  logo: {
-    type: Types.ObjectId,
-    ref: "image",
-    default: null,
+    profileShow: {
+      type: Boolean,
+      default: true,
+    },
+    cardShow: {
+      type: Boolean,
+      default: true,
+    },
+    displayOnTop: {
+      type: Boolean,
+      default: false,
+    },
+    value: {
+      type: String,
+      required: true,
+    },
+    label: {
+      type: String,
+    },
+    account: {
+      type: Types.ObjectId,
+      ref: "accounts",
+      required: true,
+    },
+    links: [
+      {
+        accountLink: {
+          type: Types.ObjectId,
+          ref: "account_links",
+        },
+        show: {
+          type: Boolean,
+          default: true,
+        },
+      },
+    ],
+    logo: {
+      type: Types.ObjectId,
+      ref: "image",
+      default: null,
+    },
+    fileValue: {
+      type: Types.ObjectId,
+      ref: "image",
+      default: null,
+    },
+    fileType: {
+      type: String,
+    },
+    extraTitle: {
+      type: String,
+      default: "",
+    },
+    extraDescription: {
+      type: String,
+      default: "",
+    },
   },
-  fileValue: {
-    type: Types.ObjectId,
-    ref: "image",
-    default: null,
-  },
-  fileType: {
-    type: String,
-  },
-}, { timestamps: true });
+  { timestamps: true }
+);
 
 export const AccountLinkModel = model<IAccountLink>(
   "account_links",

@@ -1,11 +1,14 @@
 import express, { Router } from "express";
 import { validateIsAdmin } from "../../middleware/validateIsAdmin";
 import { validateSelfAccount } from "../../middleware/validateSelfAccount";
+import { validateSelfAccountId } from "../../middleware/validateSelfAccountId";
 import AccountLink from "./accountLink";
 import Connect from "./connect";
 import Controller from "./controller";
+import CustomQR from "./customQR";
 import Group from "./group";
 import PersonalConnection from "./personalConnection";
+import VirtualBackGround from "./virtualBackGround";
 
 export default class Account extends Controller {
   public instance: express.Application;
@@ -42,7 +45,17 @@ export default class Account extends Controller {
       validateSelfAccount,
       new Group().router
     );
-    //group
+    this.instance.use(
+      "/:accountId/customQR",
+      validateSelfAccountId,
+      new CustomQR().router
+    );
+    this.instance.use(
+      "/:accountId/customQR",
+      validateSelfAccountId,
+      new VirtualBackGround().router
+    );
+
     this.instance.put(
       "/:accountId/verify",
       validateIsAdmin,

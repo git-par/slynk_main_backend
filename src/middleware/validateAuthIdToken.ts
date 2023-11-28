@@ -9,11 +9,14 @@ export const validateAuthIdToken = async (
   res: Response,
   next: NextFunction
 ) => {
+  console.log(req.headers);
+  console.log(req.signedCookies);
+
   const token =
     req.headers.authorization ||
     req.signedCookies.auth ||
     req.signedCookies.admin_auth;
-
+  console.log({ token });
   if (!token) {
     res.clearCookie("admin_auth", {
       //httpOnly: true,
@@ -69,6 +72,13 @@ export const validateAuthIdToken = async (
     res.status(403).json({
       message:
         "Please contact to admin. your access is  temporary deactivated. ",
+    });
+    return;
+  }
+  //@ts-ignore
+  if (new Date().getTime() < (user.suspend.suspendTill || 0)) {
+    res.status(403).json({
+      message: "Please contact to admin. your access is temporary suspended. ",
     });
     return;
   }
