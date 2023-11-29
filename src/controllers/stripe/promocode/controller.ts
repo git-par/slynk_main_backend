@@ -244,7 +244,7 @@ export default class Controller {
   protected readonly delete = async (req: Request, res: Response) => {
     try {
       const promoCodeId = req.params.promoCodeId;
-      console.log(promoCodeId);
+      // console.log(promoCodeId);
 
       if (!promoCodeId) {
         res.status(422).json({

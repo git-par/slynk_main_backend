@@ -191,7 +191,7 @@ export default class Controller {
   // };
 
   protected readonly delete = async (req: Request, res: Response) => {
-    console.log("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@delete@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+    // console.log("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@delete@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
     
     // console.log(req.authUser,">>>>>>>>>>>>>>>>>>>>>>>>>>>");
     const user=req.authUser

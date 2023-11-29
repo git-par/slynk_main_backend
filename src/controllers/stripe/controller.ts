@@ -111,7 +111,7 @@ export default class Controller {
 
         return;
       }
-      console.log(priceData);
+      // console.log(priceData);
       const ephemeralKey = await stripeInstance().ephemeralKeys.create(
         { customer: user.stripeAccount },
         { apiVersion: "2020-08-27" }
@@ -143,7 +143,7 @@ export default class Controller {
       console.log("cancle subscription");
 
       const user = req.authUser;
-      console.log({ user });
+      // console.log({ user });
       const subscribedUser = await getUserById(user._id);
       // if (subscribedUser.isCancelSub) {
       //   res.status(200).json({ flag: true });
@@ -152,7 +152,7 @@ export default class Controller {
         customer: user.stripeAccount,
       });
 
-      console.log(user.stripeAccount);
+      // console.log(user.stripeAccount);
       /* eslint-disable @typescript-eslint/no-explicit-any */
       const subList = data.map((item: any) => {
         return {

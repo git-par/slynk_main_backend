@@ -4,6 +4,7 @@ import Analytics from "./analytics";
 import SuperAdmin from "./superAdmin";
 import UserUpdate from "./userUpdate";
 import SuspendType from "./suspendType";
+import Subscription from "./subscription";
 
 export default class Admin {
   public instance: express.Application;
@@ -23,5 +24,6 @@ export default class Admin {
     this.instance.use("/userUpdate", new UserUpdate().router);
     this.instance.use("/analytics", new Analytics().router);
     this.instance.use("/suspendType", new SuspendType().router);
+    this.instance.use("/subscription", new Subscription().router);
   }
 }

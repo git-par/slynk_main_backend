@@ -22,7 +22,7 @@ export default class Controller {
       }
 
       const r = (Math.random() + 1).toString(36).substring(7);
-      console.log("random", r);
+      // console.log("random", r);
       const privateURL = "";
       const privateURLSave = new PrivateURL({
         accountId: _id,

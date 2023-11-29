@@ -79,7 +79,7 @@ export default class Controller {
                 html
               )
                 .then((result) => {
-                  console.log(result);
+                  // console.log(result);
                   res
                     .status(200)
                     .json({ message: "Invite code successfully sended." });

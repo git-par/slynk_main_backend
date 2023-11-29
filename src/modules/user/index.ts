@@ -11,3 +11,4 @@ export * from "./deleteUser";
 export * from "./getUsers";
 export * from "./getUserWithDeleteRequest";
 export * from "./getUserWithoutDeleteRequest";
+export * from "./getUserWithCondition";

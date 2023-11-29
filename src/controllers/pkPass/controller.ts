@@ -267,8 +267,8 @@ export default class Controller {
   protected readonly passLog = async (req: Request, res: Response) => {
     try {
       const params = req.body;
-      console.log(params);
-      console.log("in passLog");
+      // console.log(params);
+      // console.log("in passLog");
       res.status(200).json({ message: "Done." });
     } catch (error) {
       console.log(error);

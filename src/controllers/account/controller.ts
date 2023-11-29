@@ -502,7 +502,7 @@ export default class Controller {
       }
 
       const walletData = await googleWalletGeneric(populatedAcc._id.toString());
-      console.log("walletData", walletData);
+      // console.log("walletData", walletData);
       return;
     } catch (error) {
       console.log(error);
@@ -559,7 +559,7 @@ export default class Controller {
           return;
         });
     } catch (error) {
-      console.log("***********");
+      // console.log("***********");
       console.log(error);
       Sentry.captureException(error);
       log("error", "error in delete account", error);

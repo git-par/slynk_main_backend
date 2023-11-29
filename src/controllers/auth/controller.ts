@@ -533,7 +533,7 @@ export default class Controller {
 
   protected readonly register = async (req: Request, res: Response) => {
     try {
-      console.log(">>>>>>>>>>>>>>>>>>>>>");
+      // console.log(">>>>>>>>>>>>>>>>>>>>>");
 
       const payload = req.body;
 
